@@ -73,9 +73,17 @@ if [ "$recordInPbBookSettings" =  "" ];
 then
   insertPbBookSettingsRec
   currentPlaceInCode="Inserting record to PocketBook Settings table"
-  dialog 1 "" "Inserted record for Book Title: $currentBookTitle, Book ID: $pbBookID, Current Page: $currentPageNum, Of Total Pages $totalPageCount" "OK"
+
+  if [ "$1" !=  "--quite" ];
+  then
+    dialog 1 "" "Inserted record for Book Title: $currentBookTitle, Book ID: $pbBookID, Current Page: $currentPageNum, Of Total Pages $totalPageCount" "OK"
+  fi
 else
   updatePbBookSettingsRec
   currentPlaceInCode="Updating value in PocketBook Book Settings Table"
-  dialog 1 "" "Updated record for Book Title: $currentBookTitle, Book ID: $pbBookID, Current Page: $currentPageNum, Of Total Pages $totalPageCount" "OK"
+
+  if [ "$1" !=  "--quite" ];
+  then
+    dialog 1 "" "Updated record for Book Title: $currentBookTitle, Book ID: $pbBookID, Current Page: $currentPageNum, Of Total Pages $totalPageCount" "OK"
+  fi
 fi
