@@ -39,20 +39,20 @@ checkError (){
 }
 
 
-koReaderBookID=$(sqlite3 $KRDB "SELECT ID FROM BOOK WHERE LAST_OPEN=(SELECT MAX(LAST_OPEN) FROM BOOK);") 2>> $LOGFILE || currentPlaceInCode="Get KoReader book Id" checkError
-echo "SELECT ID FROM BOOK WHERE LAST_OPEN=(SELECT MAX(LAST_OPEN) FROM BOOK);" >> $LOGFILE
+koReaderBookID=$(sqlite3 $KRDB "SELECT ID FROM BOOK ORDER BY LAST_OPEN DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Get KoReader book Id" checkError
+echo "SELECT ID FROM BOOK ORDER BY LAST_OPEN DESC LIMIT 1;" >> $LOGFILE
 echo "KoReader book id: $koReaderBookID" >> $LOGFILE
 
-totalPageCount=$(sqlite3 $KRDB "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE START_TIME=(SELECT MAX(START_TIME) FROM PAGE_STAT_DATA);") 2>> $LOGFILE || currentPlaceInCode="Getting total pages from KoReader" checkError
-echo "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE START_TIME=(SELECT MAX(START_TIME) FROM PAGE_STAT_DATA);" >> $LOGFILE
+totalPageCount=$(sqlite3 $KRDB "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE ID_BOOK=$koReaderBookID ORDER BY START_TIME DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Getting total pages from KoReader" checkError
+echo "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE ID_BOOK=$koReaderBookID ORDER BY START_TIME DESC LIMIT 1;" >> $LOGFILE
 echo "KoReader Total Page Count: $totalPageCount" >> $LOGFILE
 
-currentPageNum=$(sqlite3 $KRDB "SELECT PAGE FROM PAGE_STAT_DATA WHERE START_TIME=(SELECT MAX(START_TIME) FROM PAGE_STAT_DATA WHERE ID_BOOK=\""$koReaderBookID"\");") 2>> $LOGFILE || currentPlaceInCode="Getting current page from KoReader" checkError
+currentPageNum=$(sqlite3 $KRDB "SELECT PAGE FROM PAGE_STAT_DATA WHERE ID_BOOK=\""$koReaderBookID"\" ORDER BY START_TIME DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Getting current page from KoReader" checkError
 echo "SELECT PAGE FROM PAGE_STAT_DATA WHERE START_TIME=(SELECT MAX(START_TIME) FROM PAGE_STAT_DATA WHERE ID_BOOK=$koReaderBookID" >> $LOGFILE
 echo "KoReader Current Page Number $currentPageNum" >> $LOGFILE
 
-currentBookTitle=$(sqlite3 $KRDB "SELECT TITLE FROM BOOK WHERE LAST_OPEN=(SELECT MAX(LAST_OPEN)FROM BOOK);") 2>>$LOGFILE || currentPlaceInCode="Getting current book title from KoReader" checkError
-echo "SELECT TITLE FROM BOOK WHERE LAST_OPEN=(SELECT MAX(LAST_OPEN)FROM BOOK);" >> $LOGFILE
+currentBookTitle=$(sqlite3 $KRDB "SELECT TITLE FROM BOOK WHERE ID=\""$koReaderBookID"\";") 2>>$LOGFILE || currentPlaceInCode="Getting current book title from KoReader" checkError
+echo "SELECT TITLE FROM BOOK WHERE ID_BOOK=\""$koReaderBookID"\";" >> $LOGFILE
 echo "KoReader Current Book Title $currentBookTitle" >> $LOGFILE
 
 pbBookID=$(sqlite3 $PBDB "SELECT ID FROM BOOKS_IMPL WHERE TRIM(UPPER(TITLE))=TRIM(UPPER('$currentBookTitle'));") 2>> $LOGFILE || currentPlaceInCode="Getting pocketbook book ID" checkError 
