@@ -1,6 +1,7 @@
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
 local logger = require("logger")
+local UIManager = require("ui/uimanager")
 
 local PocketbookSync = WidgetContainer:extend{
     name = "pocketbooksync",
@@ -23,11 +24,15 @@ function PocketbookSync:getTitle()
 end
 
 function PocketbookSync:onPageUpdate(page)
-    local title = self:getTitle()
+    logger.info("Pocketbook Sync: Page update registered")
 
-    if title ~= "" then
-        self:sync(title, page);
-    end
+    UIManager:scheduleIn(3, function()
+        local title = self:getTitle()
+
+        if title ~= "" then
+            self:sync(title, page);
+        end
+    end)
 end
 
 return PocketbookSync

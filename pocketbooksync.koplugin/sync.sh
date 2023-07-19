@@ -44,9 +44,23 @@ koReaderBookID=$(sqlite3 $KRDB "SELECT ID FROM BOOK WHERE TITLE = '$currentBookT
 echo "SELECT ID FROM BOOK WHERE TITLE = '$currentBookTitle' ORDER BY LAST_OPEN DESC LIMIT 1;" >> $LOGFILE
 echo "KoReader book id: $koReaderBookID" >> $LOGFILE
 
+if [ -z "$koReaderBookID" ];
+then
+  echo "No KOReader ID found in book table" >> $LOGFILE
+
+  exit 0
+fi
+
 totalPageCount=$(sqlite3 $KRDB "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE ID_BOOK=$koReaderBookID ORDER BY START_TIME DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Getting total pages from KoReader" checkError
 echo "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE ID_BOOK=$koReaderBookID ORDER BY START_TIME DESC LIMIT 1;" >> $LOGFILE
 echo "KoReader Total Page Count: $totalPageCount" >> $LOGFILE
+
+if [ -z "$totalPageCount" ];
+then
+  echo "No total page count found in page_stat_data table" >> $LOGFILE
+
+  exit 0
+fi
 
 currentPageNum=$1
 echo "KoReader Current Page Number $currentPageNum" >> $LOGFILE
