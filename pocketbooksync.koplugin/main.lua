@@ -7,14 +7,27 @@ local PocketbookSync = WidgetContainer:extend{
     is_doc_only = false,
 }
 
-function PocketbookSync:sync(pageno)
-    logger.info("Pocketbook Sync: Run Syncing script. Page number: " .. pageno)
+function PocketbookSync:sync(title, page)
+    local command = "sh /mnt/ext1/applications/koreader/plugins/pocketbooksync.koplugin/sync.sh " .. page  .. " \"" .. title .. "\""
+    logger.info("Pocketbook Sync: Run sync: " .. command)
 
-    os.execute("sh /mnt/ext1/applications/koreader/plugins/pocketbooksync.koplugin/sync.sh " .. pageno)
+    os.execute(command)
+end
+
+function PocketbookSync:getTitle()
+    local props = self.view.document:getProps()
+
+    logger.info("Pocketbook Sync: Get book title " .. props.title)
+
+    return props.title
 end
 
 function PocketbookSync:onPageUpdate(page)
-    self:sync(page);
+    local title = self:getTitle()
+
+    if title ~= "" then
+        self:sync(title, page);
+    end
 end
 
 return PocketbookSync

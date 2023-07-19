@@ -1,9 +1,8 @@
 #!/bin/sh
 
-LOGFILE=/tmp/currentPageUpdateLog.txt
+LOGFILE=/mnt/ext1/applications/koreader/plugins/pocketbooksync.koplugin/sync.log
 KRDB=/mnt/ext1/applications/koreader/settings/statistics.sqlite3
 PBDB=/mnt/ext1/system/explorer-3/explorer-3.db
-
 
 #cd /mnt/ext1/applications
 echo "Starting page update `date`" > $LOGFILE
@@ -39,9 +38,10 @@ checkError (){
   fi
 }
 
+currentBookTitle=$2
 
-koReaderBookID=$(sqlite3 $KRDB "SELECT ID FROM BOOK ORDER BY LAST_OPEN DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Get KoReader book Id" checkError
-echo "SELECT ID FROM BOOK ORDER BY LAST_OPEN DESC LIMIT 1;" >> $LOGFILE
+koReaderBookID=$(sqlite3 $KRDB "SELECT ID FROM BOOK WHERE TITLE = '$currentBookTitle' ORDER BY LAST_OPEN DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Get KoReader book Id" checkError
+echo "SELECT ID FROM BOOK WHERE TITLE = '$currentBookTitle' ORDER BY LAST_OPEN DESC LIMIT 1;" >> $LOGFILE
 echo "KoReader book id: $koReaderBookID" >> $LOGFILE
 
 totalPageCount=$(sqlite3 $KRDB "SELECT TOTAL_PAGES FROM PAGE_STAT_DATA WHERE ID_BOOK=$koReaderBookID ORDER BY START_TIME DESC LIMIT 1;") 2>> $LOGFILE || currentPlaceInCode="Getting total pages from KoReader" checkError
@@ -51,22 +51,19 @@ echo "KoReader Total Page Count: $totalPageCount" >> $LOGFILE
 currentPageNum=$1
 echo "KoReader Current Page Number $currentPageNum" >> $LOGFILE
 
-currentBookTitle=$(sqlite3 $KRDB "SELECT TITLE FROM BOOK WHERE ID=\""$koReaderBookID"\";") 2>>$LOGFILE || currentPlaceInCode="Getting current book title from KoReader" checkError
-echo "SELECT TITLE FROM BOOK WHERE ID_BOOK=\""$koReaderBookID"\";" >> $LOGFILE
-echo "KoReader Current Book Title $currentBookTitle" >> $LOGFILE
-
 pbBookID=$(sqlite3 $PBDB "SELECT ID FROM BOOKS_IMPL WHERE TRIM(UPPER(TITLE))=TRIM(UPPER('$currentBookTitle'));") 2>> $LOGFILE || currentPlaceInCode="Getting pocketbook book ID" checkError
 echo "SELECT ID FROM BOOKS_IMPL WHERE TRIM(UPPER(TITLE))=TRIM(UPPER($currentBookTitle));" >> $LOGFILE
 echo "PocketBook ID: $pbBookID" >> $LOGFILE
 
 if [ -z "$pbBookID" ];
 then
-        echo "No Pocket Book ID found in books_impl" >> $LOGFILE
-	currentPlaceInCode="No PocketBook ID found in books_impl"
-	checkError true
+  echo "No Pocket Book ID found in books_impl" >> $LOGFILE
+  currentPlaceInCode="No PocketBook ID found in books_impl"
+
+  exit 0
 fi
 
-recordInPbBookSettings=$(sqlite3 $PBDB "SELECT BOOKID FROM BOOKS_SETTINGS WHERE BOOKID = \""$pbBookID"\";") 2>> $LOGFILE || currentPlaceInCode="Getting pocketbook book settings record" checkError
+recordInPbBookSettings=$(sqlite3 $PBDB "SELECT BOOKID FROM BOOKS_SETTINGS WHERE BOOKID = $pbBookID;") 2>> $LOGFILE || currentPlaceInCode="Getting pocketbook book settings record" checkError
 echo "Record in PocketBook Settings Table: $recordInPbBookSettings" >> $LOGFILE
 
 if [ "$recordInPbBookSettings" = "" ];
