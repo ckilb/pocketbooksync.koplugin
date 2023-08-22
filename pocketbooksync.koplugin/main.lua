@@ -1,3 +1,9 @@
+local Device = require("device")
+
+if not Device:isPocketbook() then
+    return { disabled = true, }
+end
+
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
 local logger = require("logger")
