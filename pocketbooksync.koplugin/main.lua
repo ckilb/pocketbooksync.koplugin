@@ -54,7 +54,7 @@ end
 function PocketbookSync:getTitle()
     local props = self.view.document:getProps()
 
-    return props.title
+    return string.gsub(props.title, ":\/", "")
 end
 
 function PocketbookSync:onPageUpdate(page)
