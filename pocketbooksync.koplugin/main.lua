@@ -1,6 +1,6 @@
 local Device = require("device")
 
-if not Device:isPocketbook() then
+if not Device:isPocketBook() then
     return { disabled = true, }
 end
 
