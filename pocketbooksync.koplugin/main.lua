@@ -7,6 +7,7 @@ end
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
 local logger = require("logger")
+local util = require("util")
 local UIManager = require("ui/uimanager")
 local SQ3 = require("lua-ljsqlite3/init")
 local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
@@ -16,7 +17,7 @@ local PocketbookSync = WidgetContainer:extend{
     is_doc_only = false,
 }
 
-function PocketbookSync:sync(title, page)
+function PocketbookSync:sync(folder, file, page)
     local totalPages = self.view.document:getPageCount()
     if not totalPages then
         logger.info("Pocketbook Sync: No total pages found " .. title .. ", " .. page)
@@ -29,45 +30,50 @@ function PocketbookSync:sync(title, page)
     end
 
     local stmt = [[
+            SELECT book_id
+            FROM files
+            WHERE
+                folder_id = (SELECT id FROM folders WHERE name = ? LIMIT 1)
+            AND filename = ?
+            LIMIT 1
+        ]]
+    local row = pocketbookDbConn:prepare(stmt):reset():bind(folder, file):step()
+
+    if row == nil then
+        logger.info("Pocketbook Sync: Book id for " .. folder .. "/" .. file .. " not found")
+        return
+    end
+    local book_id = row[1]
+
+    local stmt = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
-            VALUES
-            (
-                (SELECT id
-                FROM books_impl
-                WHERE TRIM(LOWER(title))=TRIM(LOWER(?))
-                ORDER BY id DESC
-                LIMIT 1),
-                1,
-                ?,
-                ?,
-                ?,
-                ?
-            )
+            VALUES (?, 1, ?, ?, ?, ?)
         ]]
-
-    stmt = pocketbookDbConn:prepare(stmt)
-
-    stmt:reset():bind(title, page, totalPages, completed, os.time(os.date("!*t"))):step()
+    pocketbookDbConn:prepare(stmt):reset():bind(book_id, page, totalPages, completed, os.time(os.date("!*t"))):step()
 end
 
-function PocketbookSync:getTitle()
-    local props = self.view.document:getProps()
-
-    return props.title
+function PocketbookSync:getFolderFile()
+    local path = self.view.document.file
+    local folder, file = util.splitFilePathName(path)
+    local folderTrimmed = folder:match("(.*)/")
+    if folderTrimmed ~= nil then
+        folder = folderTrimmed
+    end
+    return folder, file
 end
 
 function PocketbookSync:onPageUpdate(page)
     UIManager:scheduleIn(3, function()
-        local title = self:getTitle()
+        local folder, file = self:getFolderFile()
 
-        if title ~= "" then
-            self:sync(title, page);
+        if folder ~= "" and file ~= "" then
+            self:sync(folder, file, page);
 
             return
         end
 
-        logger.info("Pocketbook Sync: Title not found")
+        logger.info("Pocketbook Sync: File not specified")
     end)
 end
 
