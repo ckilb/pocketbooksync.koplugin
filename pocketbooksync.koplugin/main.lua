@@ -12,6 +12,9 @@ local UIManager = require("ui/uimanager")
 local SQ3 = require("lua-ljsqlite3/init")
 local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
 
+-- wait for database locks for up to 1 second before raising an error
+pocketbookDbConn:set_busy_timeout(1000)
+
 local PocketbookSync = WidgetContainer:extend{
     name = "pocketbooksync",
     is_doc_only = false,
@@ -29,7 +32,7 @@ function PocketbookSync:sync(folder, file, page)
         completed = 1
     end
 
-    local stmt = [[
+    local sql = [[
             SELECT book_id
             FROM files
             WHERE
@@ -37,7 +40,9 @@ function PocketbookSync:sync(folder, file, page)
             AND filename = ?
             LIMIT 1
         ]]
-    local row = pocketbookDbConn:prepare(stmt):reset():bind(folder, file):step()
+    local stmt = pocketbookDbConn:prepare(sql)
+    local row = stmt:reset():bind(folder, file):step()
+    stmt:close()
 
     if row == nil then
         logger.info("Pocketbook Sync: Book id for " .. folder .. "/" .. file .. " not found")
@@ -45,12 +50,14 @@ function PocketbookSync:sync(folder, file, page)
     end
     local book_id = row[1]
 
-    local stmt = [[
+    local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
             VALUES (?, 1, ?, ?, ?, ?)
         ]]
-    pocketbookDbConn:prepare(stmt):reset():bind(book_id, page, totalPages, completed, os.time(os.date("!*t"))):step()
+    local stmt = pocketbookDbConn:prepare(sql)
+    stmt:reset():bind(book_id, page, totalPages, completed, os.time(os.date("!*t"))):step()
+    stmt:close()
 end
 
 function PocketbookSync:getFolderFile()
