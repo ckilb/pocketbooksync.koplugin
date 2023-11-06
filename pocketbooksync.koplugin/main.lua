@@ -21,11 +21,26 @@ local PocketbookSync = WidgetContainer:extend{
     is_doc_only = false,
 }
 
+function PocketbookSync:immediateSync()
+    UIManager:unschedule(self.doSync)
+    self:doSync(self:prepareSync())
+end
+
 function PocketbookSync:scheduleSync()
+    UIManager:unschedule(self.doSync)
+    UIManager:scheduleIn(3, self.doSync, self, self:prepareSync())
+end
+
+function PocketbookSync:prepareSync()
+    if not self.view.document or not self.ui.document then
+        -- onFlushSettings called during koreader exit no longer has self.ui.document
+        return nil
+    end
+
     local folder, file = self:getFolderFile()
     if not folder or folder == "" or not file or file == "" then
         logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
-        return
+        return nil
     end
 
     local totalPages = self.view.document:getPageCount()
@@ -42,12 +57,16 @@ function PocketbookSync:scheduleSync()
         totalPages = totalPages,
         page = page,
         completed = completed,
+        time = os.time(os.date("!*t")),
     }
-
-    UIManager:scheduleIn(3, self.doSync, self, data)
+    return data
 end
 
 function PocketbookSync:doSync(data)
+    if not data then
+        return
+    end
+
     local sql = [[
             SELECT book_id
             FROM files
@@ -72,7 +91,7 @@ function PocketbookSync:doSync(data)
             VALUES (?, 1, ?, ?, ?, ?)
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    stmt:reset():bind(book_id, data.page, data.totalPages, data.completed, os.time(os.date("!*t"))):step()
+    stmt:reset():bind(book_id, data.page, data.totalPages, data.completed, data.time):step()
     stmt:close()
 end
 
@@ -98,12 +117,16 @@ function PocketbookSync:onPageUpdate()
     self:scheduleSync()
 end
 
+function PocketbookSync:onFlushSettings()
+    self:immediateSync()
+end
+
 function PocketbookSync:onCloseDocument()
-    self:scheduleSync()
+    self:immediateSync()
 end
 
 function PocketbookSync:onEndOfBook()
-    self:scheduleSync()
+    self:immediateSync()
 end
 
 return PocketbookSync
