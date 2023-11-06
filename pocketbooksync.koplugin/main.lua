@@ -6,6 +6,7 @@ end
 
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
+local Math = require("optmath")
 local logger = require("logger")
 local util = require("util")
 local UIManager = require("ui/uimanager")
@@ -20,18 +21,33 @@ local PocketbookSync = WidgetContainer:extend{
     is_doc_only = false,
 }
 
-function PocketbookSync:sync(folder, file, page)
+function PocketbookSync:scheduleSync()
+    local folder, file = self:getFolderFile()
+    if not folder or folder == "" or not file or file == "" then
+        logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
+        return
+    end
+
     local totalPages = self.view.document:getPageCount()
-    if not totalPages then
-        logger.info("Pocketbook Sync: No total pages found " .. title .. ", " .. page)
-    end
+    local lastPercent = self:getLastPercent()
+    local page = math.floor(totalPages * lastPercent)
 
-    local completed = 0
+    local summary = self.ui.doc_settings:readSetting("summary")
+    local status = summary and summary.status
+    local completed = (status == "complete" or lastPercent == 1) and 1 or 0
 
-    if page >= totalPages then
-        completed = 1
-    end
+    local data = {
+        folder = folder,
+        file = file,
+        totalPages = totalPages,
+        page = page,
+        completed = completed,
+    }
 
+    UIManager:scheduleIn(3, self.doSync, self, data)
+end
+
+function PocketbookSync:doSync(data)
     local sql = [[
             SELECT book_id
             FROM files
@@ -41,11 +57,11 @@ function PocketbookSync:sync(folder, file, page)
             LIMIT 1
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    local row = stmt:reset():bind(folder, file):step()
+    local row = stmt:reset():bind(data.folder, data.file):step()
     stmt:close()
 
     if row == nil then
-        logger.info("Pocketbook Sync: Book id for " .. folder .. "/" .. file .. " not found")
+        logger.info("Pocketbook Sync: Book id for " .. data.folder .. "/" .. data.file .. " not found")
         return
     end
     local book_id = row[1]
@@ -56,7 +72,7 @@ function PocketbookSync:sync(folder, file, page)
             VALUES (?, 1, ?, ?, ?, ?)
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    stmt:reset():bind(book_id, page, totalPages, completed, os.time(os.date("!*t"))):step()
+    stmt:reset():bind(book_id, data.page, data.totalPages, data.completed, os.time(os.date("!*t"))):step()
     stmt:close()
 end
 
@@ -70,18 +86,24 @@ function PocketbookSync:getFolderFile()
     return folder, file
 end
 
-function PocketbookSync:onPageUpdate(page)
-    UIManager:scheduleIn(3, function()
-        local folder, file = self:getFolderFile()
+function PocketbookSync:getLastPercent()
+    if self.ui.document.info.has_pages then
+        return Math.roundPercent(self.ui.paging:getLastPercent())
+    else
+        return Math.roundPercent(self.ui.rolling:getLastPercent())
+    end
+end
 
-        if folder ~= "" and file ~= "" then
-            self:sync(folder, file, page);
+function PocketbookSync:onPageUpdate()
+    self:scheduleSync()
+end
 
-            return
-        end
+function PocketbookSync:onCloseDocument()
+    self:scheduleSync()
+end
 
-        logger.info("Pocketbook Sync: File not specified")
-    end)
+function PocketbookSync:onEndOfBook()
+    self:scheduleSync()
 end
 
 return PocketbookSync
