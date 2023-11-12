@@ -6,6 +6,7 @@ end
 
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
+local Math = require("optmath")
 local logger = require("logger")
 local util = require("util")
 local UIManager = require("ui/uimanager")
@@ -20,16 +21,50 @@ local PocketbookSync = WidgetContainer:extend{
     is_doc_only = false,
 }
 
-function PocketbookSync:sync(folder, file, page)
-    local totalPages = self.view.document:getPageCount()
-    if not totalPages then
-        logger.info("Pocketbook Sync: No total pages found " .. title .. ", " .. page)
+function PocketbookSync:immediateSync()
+    UIManager:unschedule(self.doSync)
+    self:doSync(self:prepareSync())
+end
+
+function PocketbookSync:scheduleSync()
+    UIManager:unschedule(self.doSync)
+    UIManager:scheduleIn(3, self.doSync, self, self:prepareSync())
+end
+
+function PocketbookSync:prepareSync()
+    if not self.view.document or not self.ui.document then
+        -- onFlushSettings called during koreader exit no longer has self.ui.document
+        return nil
     end
 
-    local completed = 0
+    local folder, file = self:getFolderFile()
+    if not folder or folder == "" or not file or file == "" then
+        logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
+        return nil
+    end
 
-    if page >= totalPages then
-        completed = 1
+    local totalPages = self.view.document:getPageCount()
+    local lastPercent = self:getLastPercent()
+    local page = math.floor(totalPages * lastPercent)
+
+    local summary = self.ui.doc_settings:readSetting("summary")
+    local status = summary and summary.status
+    local completed = (status == "complete" or lastPercent == 1) and 1 or 0
+
+    local data = {
+        folder = folder,
+        file = file,
+        totalPages = totalPages,
+        page = page,
+        completed = completed,
+        time = os.time(os.date("!*t")),
+    }
+    return data
+end
+
+function PocketbookSync:doSync(data)
+    if not data then
+        return
     end
 
     local sql = [[
@@ -41,11 +76,11 @@ function PocketbookSync:sync(folder, file, page)
             LIMIT 1
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    local row = stmt:reset():bind(folder, file):step()
+    local row = stmt:reset():bind(data.folder, data.file):step()
     stmt:close()
 
     if row == nil then
-        logger.info("Pocketbook Sync: Book id for " .. folder .. "/" .. file .. " not found")
+        logger.info("Pocketbook Sync: Book id for " .. data.folder .. "/" .. data.file .. " not found")
         return
     end
     local book_id = row[1]
@@ -56,7 +91,7 @@ function PocketbookSync:sync(folder, file, page)
             VALUES (?, 1, ?, ?, ?, ?)
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    stmt:reset():bind(book_id, page, totalPages, completed, os.time(os.date("!*t"))):step()
+    stmt:reset():bind(book_id, data.page, data.totalPages, data.completed, data.time):step()
     stmt:close()
 end
 
@@ -70,18 +105,28 @@ function PocketbookSync:getFolderFile()
     return folder, file
 end
 
-function PocketbookSync:onPageUpdate(page)
-    UIManager:scheduleIn(3, function()
-        local folder, file = self:getFolderFile()
+function PocketbookSync:getLastPercent()
+    if self.ui.document.info.has_pages then
+        return Math.roundPercent(self.ui.paging:getLastPercent())
+    else
+        return Math.roundPercent(self.ui.rolling:getLastPercent())
+    end
+end
 
-        if folder ~= "" and file ~= "" then
-            self:sync(folder, file, page);
+function PocketbookSync:onPageUpdate()
+    self:scheduleSync()
+end
 
-            return
-        end
+function PocketbookSync:onFlushSettings()
+    self:immediateSync()
+end
 
-        logger.info("Pocketbook Sync: File not specified")
-    end)
+function PocketbookSync:onCloseDocument()
+    self:immediateSync()
+end
+
+function PocketbookSync:onEndOfBook()
+    self:immediateSync()
 end
 
 return PocketbookSync
