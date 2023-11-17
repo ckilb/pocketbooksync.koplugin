@@ -57,7 +57,7 @@ function PocketbookSync:prepareSync()
         totalPages = totalPages,
         page = page,
         completed = completed,
-        time = os.time(os.date("!*t")),
+        time = os.time(),
     }
     return data
 end
