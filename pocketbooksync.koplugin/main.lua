@@ -6,7 +6,6 @@ end
 
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
-local Math = require("optmath")
 local logger = require("logger")
 local util = require("util")
 local UIManager = require("ui/uimanager")
@@ -32,8 +31,10 @@ function PocketbookSync:scheduleSync()
 end
 
 function PocketbookSync:prepareSync()
-    if not self.view.document or not self.ui.document then
-        -- onFlushSettings called during koreader exit no longer has self.ui.document
+    -- onFlushSettings called during koreader exit and after onCloseDocument
+    -- would raise an error in some of the self.document methods and we can
+    -- avoid that by checking if self.ui.document is nil
+    if not self.ui.document then
         return nil
     end
 
@@ -43,13 +44,20 @@ function PocketbookSync:prepareSync()
         return nil
     end
 
-    local totalPages = self.view.document:getPageCount()
-    local lastPercent = self:getLastPercent()
-    local page = math.floor(totalPages * lastPercent)
+    local globalPage = self.view.state.page
+    local flow = self.document:getPageFlow(globalPage)
+
+    -- skip sync if not in the main flow
+    if flow ~= 0 then
+        return nil
+    end
+
+    local totalPages = self.document:getTotalPagesInFlow(flow)
+    local page = self.document:getPageNumberInFlow(globalPage)
 
     local summary = self.ui.doc_settings:readSetting("summary")
     local status = summary and summary.status
-    local completed = (status == "complete" or lastPercent == 1) and 1 or 0
+    local completed = (status == "complete" or page == totalPages) and 1 or 0
 
     local data = {
         folder = folder,
@@ -103,14 +111,6 @@ function PocketbookSync:getFolderFile()
         folder = folderTrimmed
     end
     return folder, file
-end
-
-function PocketbookSync:getLastPercent()
-    if self.ui.document.info.has_pages then
-        return Math.roundPercent(self.ui.paging:getLastPercent())
-    else
-        return Math.roundPercent(self.ui.rolling:getLastPercent())
-    end
 end
 
 function PocketbookSync:onPageUpdate()
