@@ -85,13 +85,21 @@ function PocketbookSync:doSync(data)
     end
     local book_id = row[1]
 
+	local h1 = io.popen('test=$(readlink -f /mnt/ext1/system/profiles/.current); if [ $? != 0 ]; then echo "default"; else echo ${test##*/}; fi')
+	local h2 = h1:read('*a')
+	local profile_name = h2:gsub('[\n\r]', '')
+	h1:close()
+	local stmt = pocketbookDbConn:prepare("SELECT id FROM profiles WHERE name = ?")
+	local temp_id = stmt:reset():bind(profile_name):step()
+	stmt:close()
+	local profile_id = temp_id[1]
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
-            VALUES (?, 1, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    stmt:reset():bind(book_id, data.page, data.totalPages, data.completed, data.time):step()
+    stmt:reset():bind(book_id, profile_id, data.page, data.totalPages, data.completed, data.time):step()
     stmt:close()
 end
 
