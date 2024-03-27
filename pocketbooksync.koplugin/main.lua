@@ -19,7 +19,7 @@ local inkview = ffi.load("inkview")
 pocketbookDbConn:set_busy_timeout(1000)
 
 local function GetCurrentProfileId()
-    local profile_name = ffi.string(inkview.GetCurrentProfile())
+    local profile_name = inkview.GetCurrentProfile()
     if profile_name == nil then
         return 1
     else
