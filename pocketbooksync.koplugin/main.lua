@@ -13,6 +13,9 @@ local UIManager = require("ui/uimanager")
 local SQ3 = require("lua-ljsqlite3/init")
 local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
 
+-- wait for database locks for up to 1 second before raising an error
+pocketbookDbConn:set_busy_timeout(1000)
+
 local h1 = io.popen('test=$(readlink -f /mnt/ext1/system/profiles/.current); if [ $? != 0 ]; then echo "default"; else echo ${test##*/}; fi')
 local h2 = h1:read('*a')
 local profile_name = h2:gsub('[\n\r]', '')
@@ -21,9 +24,6 @@ local stmt = pocketbookDbConn:prepare("SELECT id FROM profiles WHERE name = ?")
 local temp_id = stmt:reset():bind(profile_name):step()
 stmt:close()
 local profile_id = temp_id[1]
-
--- wait for database locks for up to 1 second before raising an error
-pocketbookDbConn:set_busy_timeout(1000)
 
 local PocketbookSync = WidgetContainer:extend{
     name = "pocketbooksync",
