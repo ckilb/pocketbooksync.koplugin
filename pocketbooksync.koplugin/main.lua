@@ -93,7 +93,7 @@ function PocketbookSync:doSync(data)
         return
     end
     local book_id = row[1]
-	
+
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
