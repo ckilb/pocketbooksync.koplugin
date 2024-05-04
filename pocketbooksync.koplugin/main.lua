@@ -59,6 +59,17 @@ function PocketbookSync:prepareSync()
     local status = summary and summary.status
     local completed = (status == "complete" or page == totalPages) and 1 or 0
 
+    -- hide the progress bar if we're on the title/cover page
+    --
+    -- we'll never set cpage=1 so the progress bar will seem to jump a bit at
+    -- the start of a book, but there's no nice way to fix that: to use the
+    -- full range, we'd need to map pages 2 to last-1 to cpages 1 to last-1,
+    -- and that always skips one position; skipping the first one is the least
+    -- surprising behaviour
+    if page == 1 then
+        page = 0
+    end
+
     local data = {
         folder = folder,
         file = file,
