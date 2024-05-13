@@ -12,9 +12,25 @@ local util = require("util")
 local UIManager = require("ui/uimanager")
 local SQ3 = require("lua-ljsqlite3/init")
 local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
+local ffi = require("ffi")
+local inkview = ffi.load("inkview")
 
 -- wait for database locks for up to 1 second before raising an error
 pocketbookDbConn:set_busy_timeout(1000)
+
+local function GetCurrentProfileId()
+    local profile_name = inkview.GetCurrentProfile()
+    if profile_name == nil then
+        return 1
+    else
+        local stmt = pocketbookDbConn:prepare("SELECT id FROM profiles WHERE name = ?")
+        local profile_id = stmt:reset():bind(ffi.string(profile_name)):step()
+        stmt:close()
+        return profile_id[1]
+    end
+end
+
+local profile_id = GetCurrentProfileId()
 
 local PocketbookSync = WidgetContainer:extend{
     name = "pocketbooksync",
@@ -88,10 +104,10 @@ function PocketbookSync:doSync(data)
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
-            VALUES (?, 1, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
-    stmt:reset():bind(book_id, data.page, data.totalPages, data.completed, data.time):step()
+    stmt:reset():bind(book_id, profile_id, data.page, data.totalPages, data.completed, data.time):step()
     stmt:close()
 end
 
