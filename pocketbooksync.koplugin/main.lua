@@ -4,6 +4,8 @@ if not Device:isPocketBook() then
     return { disabled = true }
 end
 
+local Dispatcher = require("dispatcher")
+local Event = require("ui/event")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
 local logger = require("logger")
@@ -52,10 +54,20 @@ local PocketbookSync = WidgetContainer:extend{
 }
 
 function PocketbookSync:init()
+    self:onDispatcherRegisterActions()
     self.ui.menu:registerToMainMenu(self)
 
     self.settings = G_reader_settings:readSetting("pocketbooksync", {
         hide_finished = false,
+    })
+end
+
+function PocketbookSync:onDispatcherRegisterActions()
+    Dispatcher:registerAction("pocketbook_scan_home_dir", {
+        category = "none",
+        event = "PocketBookScanHomeDir",
+        title = "PocketBook Sync: Scan home dir",
+        device = true,
     })
 end
 
@@ -68,6 +80,13 @@ function PocketbookSync:addToMainMenu(menu_items)
                 text = "Hide finished books from home screen",
                 checked_func = function() return self.settings.hide_finished end,
                 callback = function() self.settings.hide_finished = not self.settings.hide_finished end,
+            },
+            {
+                text = "Scan home dir",
+                callback = function()
+                    self.ui:handleEvent(Event:new("PocketBookScanHomeDir"))
+                end,
+                help_text = "Rescan the home directory for new, moved, or deleted books. Use this after deleting books or downloading new ones (from Calibre for example).",
             },
         },
     }
@@ -230,6 +249,30 @@ function PocketbookSync:onSuspend()
             logger.warn("Pocketbook Sync: PageSnapshot failed: " .. tostring(snapshot_err))
         end
     end
+end
+
+-- needed since
+-- https://github.com/koreader/koreader-base/commit/0b80fb26e64d3b3b2b59206c24297edc48c3199f
+-- removed unused declarations
+ffi.cdef[[
+static const int REQ_OPENBOOK = 84;
+int FindTaskByAppName(const char *);
+int SendRequestTo(int, int, void *, int, int, int);
+]]
+
+function PocketbookSync:onPocketBookScanHomeDir()
+    local task = inkview.FindTaskByAppName("scanner.app")
+    if task ~= -1 then
+        local parameters = "-scan:" .. G_reader_settings:readSetting("home_dir")
+        inkview.SendRequestTo(
+            task, ffi.C.REQ_OPENBOOK,
+            ffi.cast("void *", ffi.new("const char *", parameters)), #parameters + 1,
+            0, 2000
+        )
+        logger.info("Pocketbook Sync: scan request sent")
+    end
+
+    return true
 end
 
 return PocketbookSync
