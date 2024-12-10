@@ -13,6 +13,7 @@ local SQ3 = require("lua-ljsqlite3/init")
 local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
 local ffi = require("ffi")
 local inkview = ffi.load("inkview")
+local bookIds = {}
 
 -- wait for database locks for up to 1 second before raising an error
 pocketbookDbConn:set_busy_timeout(1000)
@@ -102,7 +103,10 @@ function PocketbookSync:doSync(data)
         return
     end
 
-    local sql = [[
+    local cacheKey = data.folder .. data.file
+
+    if not bookIds[cacheKey] then
+        local sql = [[
             SELECT book_id
             FROM files
             WHERE
@@ -110,16 +114,18 @@ function PocketbookSync:doSync(data)
             AND filename = ?
             LIMIT 1
         ]]
-    local stmt = pocketbookDbConn:prepare(sql)
-    local row = stmt:reset():bind(data.folder, data.file):step()
-    stmt:close()
+        local stmt = pocketbookDbConn:prepare(sql)
+        local row = stmt:reset():bind(data.folder, data.file):step()
+        stmt:close()
 
-    if row == nil then
-        logger.info("Pocketbook Sync: Book id for " .. data.folder .. "/" .. data.file .. " not found")
-        return
+        if row == nil then
+            logger.info("Pocketbook Sync: Book id for " .. data.folder .. "/" .. data.file .. " not found")
+            return
+        end
+        bookIds[cacheKey] = row[1]
     end
-    local book_id = row[1]
 
+    local book_id = bookIds[cacheKey]
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
