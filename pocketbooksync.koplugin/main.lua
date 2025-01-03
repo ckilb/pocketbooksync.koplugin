@@ -13,7 +13,6 @@ local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
 local ffi = require("ffi")
 local inkview = ffi.load("inkview")
 local bookIds = {}
-local preparedData = {}
 
 -- wait for database locks for up to 1 second before raising an error
 pocketbookDbConn:set_busy_timeout(1000)
@@ -39,7 +38,6 @@ local PocketbookSync = WidgetContainer:extend{
 
 function PocketbookSync:clearCache()
     bookIds = {}
-    preparedData = {}
 end
 
 function PocketbookSync:sync()
@@ -54,52 +52,46 @@ function PocketbookSync:prepareSync()
         return nil
     end
 
-    local cacheKey = self.ui.document.file
-
-    if not preparedData[cacheKey] then
-        local folder, file = self:getFolderFile()
-        if not folder or folder == "" or not file or file == "" then
-            logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
-            return nil
-        end
-
-        local globalPage = self.view.state.page
-        local flow = self.document:getPageFlow(globalPage)
-
-        -- skip sync if not in the main flow
-        if flow ~= 0 then
-            return nil
-        end
-
-        local totalPages = self.document:getTotalPagesInFlow(flow)
-        local page = self.document:getPageNumberInFlow(globalPage)
-
-        local summary = self.ui.doc_settings:readSetting("summary")
-        local status = summary and summary.status
-        local completed = (status == "complete" or page == totalPages) and 1 or 0
-
-        -- hide the progress bar if we're on the title/cover page
-        --
-        -- we'll never set cpage=1 so the progress bar will seem to jump a bit at
-        -- the start of a book, but there's no nice way to fix that: to use the
-        -- full range, we'd need to map pages 2 to last-1 to cpages 1 to last-1,
-        -- and that always skips one position; skipping the first one is the least
-        -- surprising behaviour
-        if page == 1 then
-            page = 0
-        end
-
-        preparedData[cacheKey] = {
-            folder = folder,
-            file = file,
-            totalPages = totalPages,
-            page = page,
-            completed = completed,
-            time = os.time(),
-        }
+    local folder, file = self:getFolderFile()
+    if not folder or folder == "" or not file or file == "" then
+        logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
+        return nil
     end
-    
-    return preparedData[cacheKey]
+
+    local globalPage = self.view.state.page
+    local flow = self.document:getPageFlow(globalPage)
+
+    -- skip sync if not in the main flow
+    if flow ~= 0 then
+        return nil
+    end
+
+    local totalPages = self.document:getTotalPagesInFlow(flow)
+    local page = self.document:getPageNumberInFlow(globalPage)
+
+    local summary = self.ui.doc_settings:readSetting("summary")
+    local status = summary and summary.status
+    local completed = (status == "complete" or page == totalPages) and 1 or 0
+
+    -- hide the progress bar if we're on the title/cover page
+    --
+    -- we'll never set cpage=1 so the progress bar will seem to jump a bit at
+    -- the start of a book, but there's no nice way to fix that: to use the
+    -- full range, we'd need to map pages 2 to last-1 to cpages 1 to last-1,
+    -- and that always skips one position; skipping the first one is the least
+    -- surprising behaviour
+    if page == 1 then
+        page = 0
+    end
+
+    return {
+        folder = folder,
+        file = file,
+        totalPages = totalPages,
+        page = page,
+        completed = completed,
+        time = os.time(),
+    }
 end
 
 function PocketbookSync:doSync(data)
@@ -150,22 +142,19 @@ function PocketbookSync:getFolderFile()
     return folder, file
 end
 
-function PocketbookSync:onPageUpdate()
-    self:sync()
-end
-
 function PocketbookSync:onFlushSettings()
-    self:clearCache()
     self:sync()
 end
 
 function PocketbookSync:onCloseDocument()
-    self:clearCache()
     self:sync()
 end
 
 function PocketbookSync:onEndOfBook()
-    self:clearCache()
+    self:sync()
+end
+
+function PocketbookSync:onSuspend()
     self:sync()
 end
 
