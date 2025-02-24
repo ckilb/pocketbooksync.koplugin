@@ -29,7 +29,7 @@ local function GetCurrentProfileId()
     end
 end
 
-function getFolderFile(path)
+function GetFolderFile(path)
     local folder, file = util.splitFilePathName(path)
     local folderTrimmed = folder:match("(.*)/")
     if folderTrimmed ~= nil then
@@ -38,7 +38,7 @@ function getFolderFile(path)
     return folder, file
 end
 
-function getBookId(folder, file)
+function GetBookId(folder, file)
     local cacheKey = folder .. file
 
     if not bookIds[cacheKey] then
@@ -65,8 +65,8 @@ function getBookId(folder, file)
 end
 
 local function DeleteFileBook(path)
-    local folder, file = getFolderFile(path)
-    local book_id = getBookId(folder, file)
+    local folder, file = GetFolderFile(path)
+    local book_id = GetBookId(folder, file)
     if book_id == nil then
         return
     end
@@ -103,7 +103,7 @@ function PocketbookSync:prepareSync()
         return nil
     end
 
-    local folder, file = getFolderFile(self.view.document.file)
+    local folder, file = GetFolderFile(self.view.document.file)
     if not folder or folder == "" or not file or file == "" then
         logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
         return nil
@@ -150,7 +150,7 @@ function PocketbookSync:doSync(data)
         return
     end
 
-    local book_id = getBookId(data.folder, data.file)
+    local book_id = GetBookId(data.folder, data.file)
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
