@@ -123,11 +123,11 @@ function PocketbookSync:getBookId(folder, file)
             LIMIT 1
         ]]
         local stmt = pocketbookDbConn:prepare(sql)
-        local row = stmt:reset():bind(data.folder, data.file):step()
+        local row = stmt:reset():bind(folder, file):step()
         stmt:close()
 
         if row == nil then
-            logger.info("Pocketbook Sync: Book id for " .. data.folder .. "/" .. data.file .. " not found")
+            logger.info("Pocketbook Sync: Book id for " .. folder .. "/" .. file .. " not found")
             return
         end
         bookIds[cacheKey] = row[1]
