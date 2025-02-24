@@ -73,7 +73,7 @@ local function DeleteFileBook(path)
 
     local sql = [[
             DELETE FROM books_impl
-            WHERE book_id = :book_id
+            WHERE id = ?
         ]]
     local stmt = pocketbookDbConn:prepare(sql)
     stmt:reset():bind(book_id):step()
