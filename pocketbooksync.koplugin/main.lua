@@ -29,6 +29,57 @@ local function GetCurrentProfileId()
     end
 end
 
+function GetFolderFile(path)
+    local folder, file = util.splitFilePathName(path)
+    local folderTrimmed = folder:match("(.*)/")
+    if folderTrimmed ~= nil then
+        folder = folderTrimmed
+    end
+    return folder, file
+end
+
+function GetBookId(folder, file)
+    local cacheKey = folder .. file
+
+    if not bookIds[cacheKey] then
+        local sql = [[
+            SELECT book_id
+            FROM files
+            WHERE
+                folder_id = (SELECT id FROM folders WHERE name = ? LIMIT 1)
+            AND filename = ?
+            LIMIT 1
+        ]]
+        local stmt = pocketbookDbConn:prepare(sql)
+        local row = stmt:reset():bind(folder, file):step()
+        stmt:close()
+
+        if row == nil then
+            logger.info("Pocketbook Sync: Book id for " .. folder .. "/" .. file .. " not found")
+            return
+        end
+        bookIds[cacheKey] = row[1]
+    end
+
+    return bookIds[cacheKey]
+end
+
+local function DeleteFileBook(path)
+    local folder, file = GetFolderFile(path)
+    local book_id = GetBookId(folder, file)
+    if book_id == nil then
+        return
+    end
+
+    local sql = [[
+            DELETE FROM books_impl
+            WHERE id = ?
+        ]]
+    local stmt = pocketbookDbConn:prepare(sql)
+    stmt:reset():bind(book_id):step()
+    stmt:close()
+end
+
 local profile_id = GetCurrentProfileId()
 
 local PocketbookSync = WidgetContainer:extend{
@@ -52,7 +103,7 @@ function PocketbookSync:prepareSync()
         return nil
     end
 
-    local folder, file = self:getFolderFile()
+    local folder, file = GetFolderFile(self.view.document.file)
     if not folder or folder == "" or not file or file == "" then
         logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
         return nil
@@ -99,29 +150,7 @@ function PocketbookSync:doSync(data)
         return
     end
 
-    local cacheKey = data.folder .. data.file
-
-    if not bookIds[cacheKey] then
-        local sql = [[
-            SELECT book_id
-            FROM files
-            WHERE
-                folder_id = (SELECT id FROM folders WHERE name = ? LIMIT 1)
-            AND filename = ?
-            LIMIT 1
-        ]]
-        local stmt = pocketbookDbConn:prepare(sql)
-        local row = stmt:reset():bind(data.folder, data.file):step()
-        stmt:close()
-
-        if row == nil then
-            logger.info("Pocketbook Sync: Book id for " .. data.folder .. "/" .. data.file .. " not found")
-            return
-        end
-        bookIds[cacheKey] = row[1]
-    end
-
-    local book_id = bookIds[cacheKey]
+    local book_id = GetBookId(data.folder, data.file)
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
@@ -132,14 +161,20 @@ function PocketbookSync:doSync(data)
     stmt:close()
 end
 
-function PocketbookSync:getFolderFile()
-    local path = self.view.document.file
-    local folder, file = util.splitFilePathName(path)
-    local folderTrimmed = folder:match("(.*)/")
-    if folderTrimmed ~= nil then
-        folder = folderTrimmed
+function PocketbookSync:init()
+    local FileManager = require("apps/filemanager/filemanager")
+
+    local deleteFile_orig = FileManager.deleteFile
+
+    FileManager.deleteFile = function(self, file, is_file)
+        -- Run original code
+        res = deleteFile_orig(self, file, is_file)
+
+        if res and is_file then
+            DeleteFileBook(file)
+        end
+        return res
     end
-    return folder, file
 end
 
 function PocketbookSync:onFlushSettings()
