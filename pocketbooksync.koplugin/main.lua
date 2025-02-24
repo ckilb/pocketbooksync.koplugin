@@ -111,7 +111,7 @@ function PocketbookSync:prepareSync()
 end
 
 function PocketbookSync:getBookId(folder, file)
-    local cacheKey = data.folder .. data.file
+    local cacheKey = folder .. file
 
     if not bookIds[cacheKey] then
         local sql = [[
