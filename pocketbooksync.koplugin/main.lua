@@ -66,7 +66,7 @@ end
 
 local function DeleteFileBook(path)
     local folder, file = getFolderFile(path)
-    local book_id = getBookId(data.folder, data.file)
+    local book_id = getBookId(folder, file)
     if book_id == nil then
         return
     end
