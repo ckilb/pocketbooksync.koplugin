@@ -29,6 +29,22 @@ local function GetCurrentProfileId()
     end
 end
 
+local function DeleteFileBook(path)
+    local folder, file = PocketbookSync:getFolderFile(path)
+    local book_id = PocketbookSync:getBookId(data.folder, data.file)
+    if book_id == nil then
+        return
+    end
+
+    local sql = [[
+            DELETE FROM books_impl
+            WHERE book_id=?
+        ]]
+    local stmt = pocketbookDbConn:prepare(sql)
+    stmt:reset():bind(book_id):step()
+    stmt:close()
+end
+
 local profile_id = GetCurrentProfileId()
 
 local PocketbookSync = WidgetContainer:extend{
@@ -52,7 +68,7 @@ function PocketbookSync:prepareSync()
         return nil
     end
 
-    local folder, file = self:getFolderFile()
+    local folder, file = self:getFolderFile(self.view.document.file)
     if not folder or folder == "" or not file or file == "" then
         logger.info("Pocketbook Sync: No folder/file found for " .. self.view.document.file)
         return nil
@@ -94,11 +110,7 @@ function PocketbookSync:prepareSync()
     }
 end
 
-function PocketbookSync:doSync(data)
-    if not data then
-        return
-    end
-
+function PocketbookSync:getBookId(folder, file)
     local cacheKey = data.folder .. data.file
 
     if not bookIds[cacheKey] then
@@ -121,7 +133,15 @@ function PocketbookSync:doSync(data)
         bookIds[cacheKey] = row[1]
     end
 
-    local book_id = bookIds[cacheKey]
+    return bookIds[cacheKey]
+end
+
+function PocketbookSync:doSync(data)
+    if not data then
+        return
+    end
+
+    local book_id = self:getBookId(data.folder, data.file)
     local sql = [[
             REPLACE INTO books_settings
             (bookid, profileid, cpage, npage, completed, opentime)
@@ -132,14 +152,29 @@ function PocketbookSync:doSync(data)
     stmt:close()
 end
 
-function PocketbookSync:getFolderFile()
-    local path = self.view.document.file
+function PocketbookSync:getFolderFile(path)
     local folder, file = util.splitFilePathName(path)
     local folderTrimmed = folder:match("(.*)/")
     if folderTrimmed ~= nil then
         folder = folderTrimmed
     end
     return folder, file
+end
+
+function PocketbookSync:init()
+    local FileManager = require("apps/filemanager/filemanager")
+
+    local deleteFile_orig = FileManager.deleteFile
+
+    FileManager.deleteFile = function(self, file, is_file)
+        -- Run original code
+        res = deleteFile_orig(self, file, is_file)
+
+        if res and is_file then
+            DeleteFileBook(file)
+        end
+        return res
+    end
 end
 
 function PocketbookSync:onFlushSettings()
