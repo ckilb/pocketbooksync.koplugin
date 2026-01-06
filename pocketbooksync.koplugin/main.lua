@@ -190,6 +190,13 @@ function PocketbookSync:onEndOfBook()
 end
 
 function PocketbookSync:onSuspend()
+    logger.dbg("PocketbookSync: onSuspend triggered")
+    
+    -- Call PageSnapshot ONLY here - this is the right place for screen capture
+    local snapshot_success, snapshot_err = pcall(inkview.PageSnapshot)
+    if not snapshot_success then
+        logger.warn("PocketbookSync: PageSnapshot failed: " .. tostring(snapshot_err))
+    end
     self:sync()
 end
 
