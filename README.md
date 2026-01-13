@@ -20,3 +20,9 @@ KOReader and PBReader.
 For further information, read the corresponding thread on MobileRead:
 https://www.mobileread.com/forums/showthread.php?t=354026
 
+## Fork Changes
+
+This custom fork has following changes:
+
+* After deleting the file, it's also deleted from the Pocketbook database, so there's no ghost entries on the home screen for the removed books.
+* Plugin keeps the open page snapshot, the same way the built-in reader does it, so you can configure the device to display it during the power up process.
