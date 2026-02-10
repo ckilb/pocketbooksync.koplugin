@@ -9,10 +9,29 @@ local _ = require("gettext")
 local logger = require("logger")
 local util = require("util")
 local SQ3 = require("lua-ljsqlite3/init")
-local pocketbookDbConn = SQ3.open("/mnt/ext1/system/explorer-3/explorer-3.db")
 local ffi = require("ffi")
 local inkview = ffi.load("inkview")
 local bookIds = {}
+
+local util = require("util")
+local pocketbookDbConn = nil
+local pocketbookDbVersion = 0
+
+for version = 2,3 do
+    local dbPath = "/mnt/ext1/system/explorer-" .. version .. "/explorer-" .. version .. ".db"
+    if util.pathExists(dbPath) then
+        logger.dbg("using PocketBook database version " .. version)
+        pocketbookDbConn = SQ3.open(dbPath)
+        pocketbookDbVersion = version
+        break
+    end
+end
+
+if pocketbookDbConn == nil then
+    logger.error("could not find or open PocketBook database - aborting")
+    return { disabled = true, }
+end
+
 
 -- wait for database locks for up to 1 second before raising an error
 pocketbookDbConn:set_busy_timeout(1000)
@@ -102,14 +121,26 @@ function PocketbookSync:doSync(data)
     local cacheKey = data.folder .. data.file
 
     if not bookIds[cacheKey] then
-        local sql = [[
-            SELECT book_id
-            FROM files
-            WHERE
-                folder_id = (SELECT id FROM folders WHERE name = ? LIMIT 1)
-            AND filename = ?
-            LIMIT 1
-        ]]
+        local sql = ""
+        if pocketbookDbVersion == 2 then
+            sql = [[
+                SELECT id
+                FROM books
+                WHERE
+                    foldername = ? AND filename = ?
+                LIMIT 1
+            ]]
+        else
+            -- pocketBookDbVersion == 3
+            sql = [[
+                SELECT book_id
+                FROM files
+                WHERE
+                    folder_id = (SELECT id FROM folders WHERE name = ? LIMIT 1)
+                AND filename = ?
+                LIMIT 1
+            ]]
+        end
         local stmt = pocketbookDbConn:prepare(sql)
         local row = stmt:reset():bind(data.folder, data.file):step()
         stmt:close()
