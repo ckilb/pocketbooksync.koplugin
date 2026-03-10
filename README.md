@@ -4,6 +4,9 @@ A KOReader plugin that syncs reading progress from KOReader to PocketBook
 Library, primarily to make the book progress bars on PocketBook's home screen
 accurate.
 
+Optionally (toggle in the Plugins menu), books marked as finished will be
+hidden from the home screen.
+
 ## Installation
 
 Copy the folder *pocketbooksync.koplugin* to */applications/koreader/plugins* on your PocketBook device.\

@@ -51,6 +51,28 @@ local PocketbookSync = WidgetContainer:extend{
     is_doc_only = false,
 }
 
+function PocketbookSync:init()
+    self.ui.menu:registerToMainMenu(self)
+
+    self.settings = G_reader_settings:readSetting("pocketbooksync", {
+        hide_finished = false,
+    })
+end
+
+function PocketbookSync:addToMainMenu(menu_items)
+    menu_items.pocketbooksync = {
+        sorting_hint = "tools",
+        text = "Pocketbook Sync",
+        sub_item_table = {
+            {
+                text = "Hide finished books from home screen",
+                checked_func = function() return self.settings.hide_finished end,
+                callback = function() self.settings.hide_finished = not self.settings.hide_finished end,
+            },
+        },
+    }
+end
+
 function PocketbookSync:clearCache()
     bookIds = {}
 end
@@ -99,13 +121,18 @@ function PocketbookSync:prepareSync()
         page = 0
     end
 
+    local time = os.time()
+    if status == "complete" and self.settings.hide_finished then
+        time = 0
+    end
+
     return {
         folder = folder,
         file = file,
         totalPages = totalPages,
         page = page,
         completed = completed,
-        time = os.time(),
+        time = time,
     }
 end
 
