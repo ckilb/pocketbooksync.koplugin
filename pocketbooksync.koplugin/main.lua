@@ -1,7 +1,7 @@
 local Device = require("device")
 
 if not Device:isPocketBook() then
-    return { disabled = true, }
+    return { disabled = true }
 end
 
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
@@ -13,25 +13,21 @@ local ffi = require("ffi")
 local inkview = ffi.load("inkview")
 local bookIds = {}
 
-local util = require("util")
-local pocketbookDbConn = nil
-local pocketbookDbVersion = 0
-
-for version = 2,3 do
-    local dbPath = "/mnt/ext1/system/explorer-" .. version .. "/explorer-" .. version .. ".db"
-    if util.pathExists(dbPath) then
-        logger.dbg("using PocketBook database version " .. version)
-        pocketbookDbConn = SQ3.open(dbPath)
-        pocketbookDbVersion = version
-        break
+local function openPocketbookDB()
+    for version = 2, 3 do
+        local dbPath = "/mnt/ext1/system/explorer-" .. version .. "/explorer-" .. version .. ".db"
+        if util.pathExists(dbPath) then
+            logger.dbg("Pocketbook Sync: Using database version " .. version)
+            return SQ3.open(dbPath), version
+        end
     end
 end
 
+local pocketbookDbConn, pocketbookDbVersion = openPocketbookDB()
 if pocketbookDbConn == nil then
-    logger.error("could not find or open PocketBook database - aborting")
-    return { disabled = true, }
+    logger.error("Pocketbook Sync: Could not find or open PocketBook database - aborting")
+    return { disabled = true }
 end
-
 
 -- wait for database locks for up to 1 second before raising an error
 pocketbookDbConn:set_busy_timeout(1000)
@@ -121,7 +117,7 @@ function PocketbookSync:doSync(data)
     local cacheKey = data.folder .. data.file
 
     if not bookIds[cacheKey] then
-        local sql = ""
+        local sql
         if pocketbookDbVersion == 2 then
             sql = [[
                 SELECT id
@@ -130,8 +126,7 @@ function PocketbookSync:doSync(data)
                     foldername = ? AND filename = ?
                 LIMIT 1
             ]]
-        else
-            -- pocketBookDbVersion == 3
+        else -- pocketBookDbVersion == 3
             sql = [[
                 SELECT book_id
                 FROM files
