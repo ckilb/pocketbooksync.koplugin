@@ -20,3 +20,12 @@ KOReader and PBReader.
 For further information, read the corresponding thread on MobileRead:
 https://www.mobileread.com/forums/showthread.php?t=354026
 
+## Boot logo: Current page
+
+This plugin calls a native PocketBook function to snapshot the last page just
+before going to sleep. Then, one might set the book logo to "last page" in the
+PocketBook device settings.
+
+To avoid the "Opening file …" screen, copy
+[2-skip-first-repaint.lua](patches/2-skip-first-repaint.lua) to
+`/applications/koreader/patches`.

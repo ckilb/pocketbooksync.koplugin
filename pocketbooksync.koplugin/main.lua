@@ -180,8 +180,20 @@ function PocketbookSync:onEndOfBook()
     self:sync()
 end
 
+-- TODO: PageSnapshot not needed once koreader get the first 2026 release
+-- https://github.com/koreader/koreader-base/pull/2247
+ffi.cdef[[
+int PageSnapshot();
+]]
+
 function PocketbookSync:onSuspend()
     self:sync()
+
+    -- Call PageSnapshot ONLY here - this is the right place for screen capture
+    local snapshot_success, snapshot_err = pcall(inkview.PageSnapshot)
+    if not snapshot_success then
+        logger.warn("Pocketbook Sync: PageSnapshot failed: " .. tostring(snapshot_err))
+    end
 end
 
 return PocketbookSync
