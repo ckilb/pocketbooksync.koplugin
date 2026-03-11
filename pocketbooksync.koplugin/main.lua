@@ -114,7 +114,7 @@ function PocketbookSync:doSync(data)
         return
     end
 
-    local cacheKey = data.folder .. data.file
+    local cacheKey = data.folder .. "/" .. data.file
 
     if not bookIds[cacheKey] then
         local sql
