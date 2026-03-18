@@ -25,9 +25,10 @@ https://www.mobileread.com/forums/showthread.php?t=354026
 
 ## Boot logo: Current page
 
-This plugin calls a native PocketBook function to snapshot the last page just
-before going to sleep. Then, one might set the book logo to "last page" in the
-PocketBook device settings.
+If the Boot Logo in PocketBook's Personalize settings is set to "Current
+Page", this plugin calls a native PocketBook function to snapshot the last
+page just before going to sleep. This allows one to resume reading much sooner
+after powering the device back on after automatic power-off.
 
 To avoid the "Opening file …" screen, copy
 [2-skip-first-repaint.lua](patches/2-skip-first-repaint.lua) to

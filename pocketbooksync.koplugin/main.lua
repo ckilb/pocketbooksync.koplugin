@@ -210,16 +210,25 @@ end
 -- TODO: PageSnapshot not needed once koreader get the first 2026 release
 -- https://github.com/koreader/koreader-base/pull/2247
 ffi.cdef[[
+struct iconfig_s * GetGlobalConfig();
+const char *ReadString(struct iconfig_s *cfg, const char *name, const char *deflt);
 int PageSnapshot();
 ]]
 
 function PocketbookSync:onSuspend()
     self:sync()
 
-    -- Call PageSnapshot ONLY here - this is the right place for screen capture
-    local snapshot_success, snapshot_err = pcall(inkview.PageSnapshot)
-    if not snapshot_success then
-        logger.warn("Pocketbook Sync: PageSnapshot failed: " .. tostring(snapshot_err))
+    -- Enable PocketBook's ⚙ → Personalize → Logos → Boot Logo → Current Page
+    --
+    -- This lets users continue reading almost immediately after turning the
+    -- reader back on after it automatically powered off
+    -- (see ⚙ → Saving Power → Power off after)
+    local bootlogo = ffi.string(inkview.ReadString(inkview.GetGlobalConfig(), "bootlogo", "@default_boot_logo"))
+    if bootlogo == "@snapshot" then
+        local snapshot_success, snapshot_err = pcall(inkview.PageSnapshot)
+        if not snapshot_success then
+            logger.warn("Pocketbook Sync: PageSnapshot failed: " .. tostring(snapshot_err))
+        end
     end
 end
 
