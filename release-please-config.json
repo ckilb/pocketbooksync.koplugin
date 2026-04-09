@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {}
+  },
+  "release-type": "simple",
+  "pull-request-title-pattern": "chore: release ${version}",
+  "changelog-sections": [
+    {"type": "docs", "section": "Documentation"},
+    {"type": "feat", "section": "Features"},
+    {"type": "fix", "section": "Bug Fixes"},
+    {"type": "perf", "section": "Performance Improvements"},
+    {"type": "build", "section": "Other"},
+    {"type": "chore", "section": "Other"},
+    {"type": "ci", "section": "Other"},
+    {"type": "refactor", "section": "Other"},
+    {"type": "revert", "section": "Other"},
+    {"type": "style", "section": "Other"},
+    {"type": "test", "section": "Other"}
+  ],
+  "extra-files": [
+    {
+      "type": "generic",
+      "path": "pocketbooksync.koplugin/_meta.lua"
+    }
+  ]
+}

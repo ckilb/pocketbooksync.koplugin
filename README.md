@@ -33,3 +33,14 @@ after powering the device back on after automatic power-off.
 To avoid the "Opening file …" screen, copy
 [2-skip-first-repaint.lua](patches/2-skip-first-repaint.lua) to
 `/applications/koreader/patches`.
+
+## Development
+
+This project uses [release-please][] to automate releases.
+When new commits are pushed to the main branch, release-please automatically opens a release pull request.
+Once the release PR is merged, a new release is created and the changelog is updated.
+
+Note that release-please requires commits to follow the [Conventional Commits][] specification and will silently skip other commits.
+
+[release-please]: https://github.com/googleapis/release-please
+[Conventional Commits]: https://www.conventionalcommits.org/
