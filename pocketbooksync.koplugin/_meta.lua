@@ -3,4 +3,5 @@ return {
     name = "pocketbooksync",
     fullname = _("Pocketbook Sync"),
     description = _([[Sync reading status with Pocketbook.]]),
+    version = "0.0.0", -- x-release-please-version
 }
