@@ -1,0 +1,32 @@
+name: conventional-commits
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  conventional-commits:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/developerc286/conventional_commits_linter:0.17.1
+    env:
+      base_before: ${{ case(github.event_name == 'pull_request', github.event.pull_request.base.sha, github.event.before) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
+          # fetch history
+          fetch-depth: 0
+          # checkout pull request HEAD commit instead of merge commit
+          ref: ${{ case(github.event_name == 'pull_request', github.event.pull_request.head.sha, '') }}
+      - name: fetch base/before
+        run: |
+          git fetch origin "$base_before"
+      - name: conventional_commits_linter
+        run: |
+          conventional_commits_linter --history-mode all --type angular "$base_before"
