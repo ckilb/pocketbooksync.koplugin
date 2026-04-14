@@ -5,13 +5,31 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 #v4.4.1
+
+  release-asset:
+    needs: release-please
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: true
+          fetch-tags: true
+      - name: Upload zip asset
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -ex
+          tag=$(git describe --tags --exact-match) || exit 0
+          zip -r pocketbooksync.koplugin-"$tag".zip pocketbooksync.koplugin/
+          gh release upload "$tag" pocketbooksync.koplugin-"$tag".zip
