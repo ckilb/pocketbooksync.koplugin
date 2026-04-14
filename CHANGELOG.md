@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/ckilb/pocketbooksync.koplugin/compare/v1.0.0...v1.0.1) (2026-04-14)
+
+
+### Other
+
+* publish zip release asset ([b422639](https://github.com/ckilb/pocketbooksync.koplugin/commit/b422639a6aad00f2b823ffbeafb19c149e947866))
+
 ## 1.0.0 (2026-04-13)
 
 
