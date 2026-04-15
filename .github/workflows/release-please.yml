@@ -12,24 +12,29 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 #v4.4.1
+        id: release
 
   release-asset:
     needs: release-please
+    if: needs.release-please.outputs.release_created
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
+          ref: refs/tags/${{ needs.release-please.outputs.tag_name }}
           persist-credentials: true
-          fetch-tags: true
       - name: Upload zip asset
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
         run: |
           set -ex
-          tag=$(git describe --tags --exact-match) || exit 0
-          zip -r pocketbooksync.koplugin-"$tag".zip pocketbooksync.koplugin/
-          gh release upload "$tag" pocketbooksync.koplugin-"$tag".zip
+          zip -r pocketbooksync.koplugin-"$TAG_NAME".zip pocketbooksync.koplugin/
+          gh release upload "$TAG_NAME" pocketbooksync.koplugin-"$TAG_NAME".zip
