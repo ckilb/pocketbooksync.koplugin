@@ -13,6 +13,9 @@ local util = require("util")
 local SQ3 = require("lua-ljsqlite3/init")
 local ffi = require("ffi")
 local inkview = ffi.load("inkview")
+local FileManagerBookInfo = require("apps/filemanager/filemanagerbookinfo")
+local Screen = require("device").screen
+local RenderImage = require("ui/renderimage")
 local bookIds = {}
 
 local function openPocketbookDB()
@@ -59,6 +62,7 @@ function PocketbookSync:init()
 
     self.settings = G_reader_settings:readSetting("pocketbooksync", {
         hide_finished = false,
+        update_cover = false,
     })
 end
 
@@ -82,6 +86,12 @@ function PocketbookSync:addToMainMenu(menu_items)
                 callback = function() self.settings.hide_finished = not self.settings.hide_finished end,
             },
             {
+                text = "Update book cover on device",
+                checked_func = function() return self.settings.update_cover end,
+                callback = function() self.settings.update_cover = not self.settings.update_cover end,
+                help_text = "Write the book's cover image to PocketBook system paths (lock screen, book cover).",
+            },
+            {
                 text = "Scan home dir",
                 callback = function()
                     self.ui:handleEvent(Event:new("PocketBookScanHomeDir"))
@@ -90,6 +100,26 @@ function PocketbookSync:addToMainMenu(menu_items)
             },
         },
     }
+end
+
+function PocketbookSync:updateCover()
+    if not self.settings.update_cover then return end
+    if not self.ui.document then return end
+
+    local image = FileManagerBookInfo:getCoverImage(self.ui.document)
+    if not image then return end
+
+    local width = Screen:getWidth()
+    local height = Screen:getHeight()
+    local rotation = Screen:getRotationMode()
+
+    if rotation == 1 or rotation == 3 then
+        width, height = height, width
+    end
+
+    local imageScaled = RenderImage:scaleBlitBuffer(image, width, height)
+    imageScaled:writeToFile("/mnt/ext1/system/logo/bookcover", "bmp", 100, false)
+    imageScaled:writeToFile("/mnt/ext1/system/resources/Line/taskmgr_lock_background.bmp", "bmp", 100, false)
 end
 
 function PocketbookSync:clearCache()
@@ -214,16 +244,26 @@ function PocketbookSync:getFolderFile()
     return folder, file
 end
 
+function PocketbookSync:onReaderReady()
+    self:updateCover()
+end
+
 function PocketbookSync:onFlushSettings()
     self:sync()
 end
 
 function PocketbookSync:onCloseDocument()
+    self:updateCover()
     self:sync()
 end
 
 function PocketbookSync:onEndOfBook()
+    self:updateCover()
     self:sync()
+end
+
+function PocketbookSync:onResume()
+    self:updateCover()
 end
 
 -- TODO: PageSnapshot not needed once koreader get the first 2026 release
@@ -235,6 +275,7 @@ int PageSnapshot();
 ]]
 
 function PocketbookSync:onSuspend()
+    self:updateCover()
     self:sync()
 
     -- Enable PocketBook's ⚙ → Personalize → Logos → Boot Logo → Current Page
