@@ -23,6 +23,13 @@ KOReader and PBReader.
 For further information, read the corresponding thread on MobileRead:
 https://www.mobileread.com/forums/showthread.php?t=354026
 
+## Book cover
+
+When enabled in the Plugins menu ("Update book cover on device"), the plugin
+writes the current book's cover image to PocketBook's system paths on suspend,
+open, close, and end of book. This updates the lock screen background and the
+native book cover display.
+
 ## Boot logo: Current page
 
 If the Boot Logo in PocketBook's Personalize settings is set to "Current
