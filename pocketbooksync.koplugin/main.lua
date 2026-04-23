@@ -16,7 +16,7 @@ local inkview = ffi.load("inkview")
 local bookIds = {}
 
 local function openPocketbookDB()
-    for version = 2, 3 do
+    for version = 3, 2, -1 do
         local dbPath = "/mnt/ext1/system/explorer-" .. version .. "/explorer-" .. version .. ".db"
         if util.pathExists(dbPath) then
             logger.dbg("Pocketbook Sync: Using database version " .. version)
