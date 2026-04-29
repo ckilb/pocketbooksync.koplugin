@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/ckilb/pocketbooksync.koplugin/compare/v1.0.2...v1.0.3) (2026-04-29)
+
+
+### Other
+
+* bump googleapis/release-please-action ([400ce12](https://github.com/ckilb/pocketbooksync.koplugin/commit/400ce128802a53df326184c8949e2e63f1d025b3))
+
 ## [1.0.2](https://github.com/ckilb/pocketbooksync.koplugin/compare/v1.0.1...v1.0.2) (2026-04-23)
 
 
