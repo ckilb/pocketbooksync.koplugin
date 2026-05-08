@@ -242,12 +242,28 @@ function PocketbookSync:onSuspend()
     -- This lets users continue reading almost immediately after turning the
     -- reader back on after it automatically powered off
     -- (see ⚙ → Saving Power → Power off after)
+    local offlogo = "/mnt/ext1/system/logo/offlogo/Current Page.bmp"
     local bootlogo = ffi.string(inkview.ReadString(inkview.GetGlobalConfig(), "bootlogo", "@default_boot_logo"))
     if bootlogo == "@snapshot" then
         local snapshot_success, snapshot_err = pcall(inkview.PageSnapshot)
+        
+        -- copy snapshot page image to offlogo dir 
+	local function copy_file(src, dst)
+    	    local infile = io.open(src, "rb")
+    	    local data = infile:read("*a")
+    	    infile:close()
+    	    local outfile = io.open(dst, "wb")
+    	    outfile:write(data)
+    	    outfile:close()
+    	end
+	copy_file("/var/tmp/logo.bin", offlogo)
+     
         if not snapshot_success then
             logger.warn("Pocketbook Sync: PageSnapshot failed: " .. tostring(snapshot_err))
+            os.remove(offlogo)
         end
+    else 
+        os.remove(offlogo)
     end
 end
 
