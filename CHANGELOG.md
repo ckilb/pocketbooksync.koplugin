@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.3](https://github.com/ckilb/pocketbooksync.koplugin/compare/v1.0.2...v1.0.3) (2026-06-24)
+
+
+### Other
+
+* bump actions/checkout in the github-actions group across 1 directory ([3784d20](https://github.com/ckilb/pocketbooksync.koplugin/commit/3784d20c3af2c1f97e7b8142d74b98bad09d76be))
+* bump actions/checkout in the github-actions group across 1 directory ([0dee083](https://github.com/ckilb/pocketbooksync.koplugin/commit/0dee0833d1714ae58a55a73baa42d884c8f5f7c0))
+* bump googleapis/release-please-action ([400ce12](https://github.com/ckilb/pocketbooksync.koplugin/commit/400ce128802a53df326184c8949e2e63f1d025b3))
+
 ## [1.0.2](https://github.com/ckilb/pocketbooksync.koplugin/compare/v1.0.1...v1.0.2) (2026-04-23)
 
 
